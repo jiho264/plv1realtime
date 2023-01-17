@@ -51,7 +51,8 @@ def load_configs(path):
 
 def png_to_bin(left_img, right_img, calib):  
     ##png to npy################################################
-    #cv2.imwrite('dev/input.png',left_img)
+    cv2.imwrite('dev/input.png',left_img)
+    #print(left_img.shape) 3, 375, 1242
     ## 여기서 바꿔야함.
     # 기존 
     #disparity_map = hitnet_depth(left_img, right_img).astype(np.uint8)
@@ -62,13 +63,15 @@ def png_to_bin(left_img, right_img, calib):
     start = torch.cuda.Event(enable_timing=True)
     end = torch.cuda.Event(enable_timing=True)
     start.record()
-       
-    imgL = torch.Tensor(left_img)
-    imgR = torch.Tensor(right_img)
-    #print('my: ',imgL.shape)
+    
+    tl = left_img.transpose((2,0,1))
+    tr = right_img.transpose((2,0,1))
+    imgL = torch.Tensor(tl)
+    imgR = torch.Tensor(tr)
+    print('my1: ',imgL.shape)
     imgL = torch.unsqueeze(imgL, 0)
     imgR = torch.unsqueeze(imgR, 0)
-    #print('my: ',imgL.shape)
+    print('my2: ',imgL.shape)
     imgL, imgR = imgL.cuda(), imgR.cuda()
 
     end.record()
@@ -106,7 +109,7 @@ def png_to_bin(left_img, right_img, calib):
     #print('error',disparity_map.shape)
     ## COEX End
     ###
-    #cv2.imwrite('dev/disparity_end.png', image2) 
+    cv2.imwrite('dev/disparity_end.png', disparity_map) 
     #hist = cv2.calcHist([disparity_map], [0], None, [256], [0, 255])
     #ax.clear()
     #ax.plot(hist)
@@ -232,14 +235,12 @@ def pcl_to_ros(pcl_array):
 def getimage2(ros_data):
     global image2
     image2 = np.frombuffer(ros_data.data, np.uint8)
-    #image2 = image2.reshape(ros_data.height, ros_data.width, 3)
-    image2 = image2.reshape(3, ros_data.height, ros_data.width)
+    image2 = image2.reshape(ros_data.height, ros_data.width, 3)
 
 def getimage3(ros_data):
     global image3
     image3 = np.frombuffer(ros_data.data, np.uint8)
-    #image3 = image3.reshape(ros_data.height, ros_data.width, 3)
-    image3 = image3.reshape(3, ros_data.height, ros_data.width)
+    image3 = image3.reshape(ros_data.height, ros_data.width, 3)
 
 def getcalib(input_ros_msg):
     global calib
