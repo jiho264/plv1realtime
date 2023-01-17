@@ -7,72 +7,36 @@ import ctypes
 import struct
 import cv2
 from sensor_msgs.msg import PointCloud2, PointField, Image, CameraInfo
-from hitnet import HitNet, ModelType, CameraConfig
-import matplotlib.pylab as plt
-#####################
-import sys
+#########################################################
 ## COEX MAIN INIT 
-import cv2
-import numpy as np
-
 import torch
-from torch.utils.data import DataLoader
-
 from ruamel.yaml import YAML
-
-from dataloaders import KITTIRawLoader as KRL
-
 from stereo import Stereo
-
 torch.backends.cudnn.benchmark = True
-
-
 torch.set_grad_enabled(False)
-
 config = 'cfg_coex.yaml'
 version = 0  # CoEx
-
-vid_date = "2011_09_26"
-vid_num = '0013'
 half_precision = True
-
-
 def load_configs(path):
     cfg = YAML().load(open(path, 'r'))
     backbone_cfg = YAML().load(
         open(cfg['model']['stereo']['backbone']['cfg_path'], 'r'))
     cfg['model']['stereo']['backbone'].update(backbone_cfg)
     return cfg
-
-
-
-#####################
-
+#########################################################
 
 def png_to_bin(left_img, right_img, calib):  
     ##png to npy################################################
     cv2.imwrite('dev/input.png',left_img)
-    #print(left_img.shape) 3, 375, 1242
-    ## 여기서 바꿔야함.
-    # 기존 
-    #disparity_map = hitnet_depth(left_img, right_img).astype(np.uint8)
-    #disparity_map = cv2.equalizeHist(disparity_map).astype(np.uint8)
-    ## COEX Start
-    #pointcloudxyzrgb = COEX RETURN
-
+    ## COEX Start ####################################
     start = torch.cuda.Event(enable_timing=True)
     end = torch.cuda.Event(enable_timing=True)
     start.record()
     
     tl = left_img.transpose((2,0,1))
     tr = right_img.transpose((2,0,1))
-    imgL = torch.Tensor(tl)
-    imgR = torch.Tensor(tr)
-    print('my1: ',imgL.shape)
-    imgL = torch.unsqueeze(imgL, 0)
-    imgR = torch.unsqueeze(imgR, 0)
-    print('my2: ',imgL.shape)
-    imgL, imgR = imgL.cuda(), imgR.cuda()
+    imgL = torch.unsqueeze(torch.Tensor(tl), 0).cuda()
+    imgR = torch.unsqueeze(torch.Tensor(tr), 0).cuda()
 
     end.record()
     torch.cuda.synchronize()
@@ -101,20 +65,9 @@ def png_to_bin(left_img, right_img, calib):
 
     disp_np = (2*disp[0]).data.cpu().numpy().astype(np.uint8)
     
-    #disp_np = cv2.applyColorMap(disp_np, cv2.COLORMAP_MAGMA)
-      
-    #disp_np = np.concatenate((disp_np), 0)
-    #disparity_map = cv2.cvtColor(disp_np, cv2.COLOR_BGR2GRAY)
     disparity_map = disp_np
-    #print('error',disparity_map.shape)
-    ## COEX End
-    ###
+    ## COEX End ####################################
     cv2.imwrite('dev/disparity_end.png', disparity_map) 
-    #hist = cv2.calcHist([disparity_map], [0], None, [256], [0, 255])
-    #ax.clear()
-    #ax.plot(hist)
-    #fig.canvas.draw()
-    #fig.canvas.flush_events()
     ##npy to bin################################################
     mycalib = kitti_util.Calibration(calib)
     disp_map = (disparity_map*256).astype(np.uint16)/256.
@@ -252,22 +205,15 @@ def getcalib(input_ros_msg):
 
 if __name__ == "__main__":
     os.environ['CUDA_VISIBLE_DEVICES'] = '0' 
-    # echo 0 | sudo tee -a /sys/bus/pci/devices/0000\:01\:00.0/numa_node
+
     rospy.init_node('plv1', anonymous=True)
     image2 = rospy.Subscriber('/kitti/camera_color_left/image_raw', Image, getimage2)
     image3 = rospy.Subscriber('/kitti/camera_color_right/image_raw', Image, getimage3)
     calib = rospy.Subscriber('/kitti/camera_color_left/camera_info', CameraInfo, getcalib)
     pub = rospy.Publisher("/pseudo_lidar", PointCloud2, queue_size = 10)
 
-    # Stereo Image Bright Histogram Chart
-    #plt.ion()
-    #fig = plt.figure()
-    #ax = fig.add_subplot(111)
-
-    #hitnet_depth = HitNet('/home/jiho/plv1realtime/dev/eth3d.pb', ModelType.eth3d, CameraConfig(0.1, 320))
-    #hitnet_depth = HitNet('/home/jiho/plv1realtime/dev/middlebury_d400.pb', ModelType.middlebury, CameraConfig(0.1, 320))
     rate = rospy.Rate(10) # 10hz
-    ############
+    ################################################
     ## COEX MAIN INIT
     cfg = load_configs(
         './configs/stereo/{}'.format(config))
@@ -278,25 +224,10 @@ if __name__ == "__main__":
     pose_ssstereo = Stereo.load_from_checkpoint(cfg['stereo_ckpt'],
                                                 strict=False,
                                                 cfg=cfg).cuda()
-
-    #left_cam, right_cam = KRL.listfiles(
-    #    cfg,
-    #    vid_date,
-    #    vid_num,
-    #    True)
-    #cfg['training']['th'] = 0
-    #cfg['training']['tw'] = 0
-    #kitti_train = KRL.ImageLoader(
-    #    left_cam, right_cam, cfg, training=True, demo=True)
-    #kitti_train = DataLoader(
-    #    kitti_train, batch_size=1,
-    #    num_workers=4, shuffle=False, drop_last=False)
-    
     fps_list = np.array([])
-
     pose_ssstereo.eval()
     
-    ############
+    ################################################
     while not rospy.is_shutdown():
         start = time.time()     
         # stereo image(.png) >> depth(.npy) >> pointcloud array(.bin)
