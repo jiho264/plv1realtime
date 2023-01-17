@@ -24,6 +24,7 @@ def png_to_bin(left_img, right_img, calib):
     ax.plot(hist)
     fig.canvas.draw()
     fig.canvas.flush_events()
+    print('error',disparity_map.shape)
     ##npy to bin################################################
     mycalib = kitti_util.Calibration(calib)
     disp_map = (disparity_map*256).astype(np.uint16)/256.
