@@ -2,6 +2,7 @@
     source : https://github.com/mileyan/Pseudo_Lidar
     maker : Jiho LEE (R.O.KOREA) / jiho264@inu.ac.kr
 ------------------------------------------------------------------------------------
+## Description
 - Real Time Vision Based LiDAR
 - This Code Can Create 16 FPS Point Cloud Topics On GTX 1080Ti
 - Original source is <Pseudo_Lidar>. i edited it.
@@ -10,15 +11,17 @@
 ## Process
 ### 1. Input.
 1. Left color image.
-> save to 'dev/input.png'
+    save to 'dev/input.png'
 2. Right color image.
 3. calibration + camera info.
 ### 2. Create Disparity Map from Stereo Image.
-> save to 'dev/input_to_disparity.png'
+    - Find Disparity and generate to Depth Image.
+    - Use <CoEx> !.
+    - save to 'dev/input_to_disparity.png'
 ### 3. Create PointCloudXYZ from Disparity Map.
 ### 4. Convert PointCloudXYZRGB to PointCloud2 msgs.
-> rostopic '/pseudo_lidar'
-> frame_id : world
+    - rostopic '/pseudo_lidar'
+    - frame_id : world
 
 ------------------------------------------------------------------------------------
 
@@ -36,7 +39,8 @@
 2. rosbag play temp.bag -l
 3. !python3 coex_plv1.py
 4. run rviz
-> /pseudo_lidar (pointcloud2); frame_id = 'world'
+    - /pseudo_lidar (pointcloud2)
+    - frame_id = 'world'
 ------------------------------------------------------------------------------------
 
 ## Reference
